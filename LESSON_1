@@ -1,4 +1,4 @@
-
+###
 endpoint == word(alphabet)
 alphabet = endpoint
 
@@ -8,3 +8,153 @@ FUNCTION(QUANTUM)
 PARSE LETTER POSSIBILITY FOR ((ENDPOINT)):
 
 QUANTUM(PARSE(ENDPOINT))
+###
+
+import numpy as np
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit_aer import AerSimulator
+from qiskit.visualization import plot_histogram
+import matplotlib.pyplot as plt
+from collections import Counter
+import math
+
+class QuantumLetterParser:
+    def __init__(self):
+        # Define alphabet in QWERTY order as specified
+        self.alphabet = ['Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M']
+        self.num_qubits = math.ceil(math.log2(len(self.alphabet)))  # Number of qubits needed to represent all letters
+        self.simulator = AerSimulator()
+    
+    def letter_to_binary(self, letter):
+        """Convert letter to binary representation"""
+        if letter.upper() in self.alphabet:
+            index = self.alphabet.index(letter.upper())
+            return format(index, f'0{self.num_qubits}b')
+        return None
+    
+    def binary_to_letter(self, binary_str):
+        """Convert binary representation back to letter"""
+        index = int(binary_str, 2)
+        if index < len(self.alphabet):
+            return self.alphabet[index]
+        return None
+    
+    def create_superposition_circuit(self):
+        """Create quantum circuit with superposition of all letters"""
+        qreg = QuantumRegister(self.num_qubits, 'q')
+        creg = ClassicalRegister(self.num_qubits, 'c')
+        circuit = QuantumCircuit(qreg, creg)
+        
+        # Create superposition of all possible letter states
+        for i in range(self.num_qubits):
+            circuit.h(qreg[i])
+        
+        return circuit, qreg, creg
+    
+    def quantum_parse_endpoint(self, endpoint):
+        """Main quantum function to parse endpoint letter possibilities"""
+        print(f"Parsing endpoint: {endpoint}")
+        print(f"Available alphabet: {' '.join(self.alphabet)}")
+        
+        # Create quantum circuit
+        circuit, qreg, creg = self.create_superposition_circuit()
+        
+        # For each letter in the endpoint, create quantum interference patterns
+        for i, letter in enumerate(endpoint.upper()):
+            if letter in self.alphabet:
+                letter_index = self.alphabet.index(letter)
+                binary_rep = format(letter_index, f'0{self.num_qubits}b')
+                
+                # Apply rotations based on letter frequency and position
+                for j, bit in enumerate(binary_rep):
+                    if bit == '1':
+                        # Apply rotation to emphasize this letter
+                        circuit.ry(np.pi / (i + 2), qreg[j])
+        
+        # Measure the quantum state
+        circuit.measure(qreg, creg)
+        
+        return circuit
+    
+    def execute_quantum_circuit(self, circuit, shots=1024):
+        """Execute the quantum circuit and return results"""
+        job = self.simulator.run(circuit, shots=shots)
+        result = job.result()
+        counts = result.get_counts(circuit)
+        return counts
+    
+    def parse_letter_possibilities(self, endpoint):
+        """Parse letter possibilities for the given endpoint using quantum processing"""
+        # Create and execute quantum circuit
+        circuit = self.quantum_parse_endpoint(endpoint)
+        counts = self.execute_quantum_circuit(circuit)
+        
+        # Convert binary results back to letters
+        letter_probabilities = {}
+        total_shots = sum(counts.values())
+        
+        for binary_state, count in counts.items():
+            letter = self.binary_to_letter(binary_state)
+            if letter:
+                probability = count / total_shots
+                letter_probabilities[letter] = probability
+        
+        # Sort by probability
+        sorted_probabilities = sorted(letter_probabilities.items(), key=lambda x: x[1], reverse=True)
+        
+        return sorted_probabilities, circuit
+    
+    def quantum_function(self, endpoint):
+        """Main QUANTUM function as specified in pseudocode"""
+        print("=" * 50)
+        print("QUANTUM LETTER PARSER")
+        print("=" * 50)
+        
+        # Parse letter possibilities
+        probabilities, circuit = self.parse_letter_possibilities(endpoint)
+        
+        print(f"\nQuantum analysis for endpoint '{endpoint}':")
+        print("-" * 30)
+        
+        # Display results
+        for letter, prob in probabilities[:10]:  # Show top 10
+            print(f"Letter {letter}: {prob:.4f} ({prob*100:.2f}%)")
+        
+        # Analyze endpoint letters
+        endpoint_letters = list(set(endpoint.upper()))
+        print(f"\nLetters in endpoint '{endpoint}': {', '.join(endpoint_letters)}")
+        
+        # Show quantum circuit
+        print(f"\nQuantum Circuit (qubits: {circuit.num_qubits}):")
+        print(circuit.draw(output='text'))
+        
+        return probabilities, circuit
+
+# Example usage and demonstration
+def main():
+    # Initialize quantum parser
+    parser = QuantumLetterParser()
+    
+    # Test with different endpoints
+    test_endpoints = ["HELLO", "QUANTUM", "PYTHON", "WORLD"]
+    
+    for endpoint in test_endpoints:
+        probabilities, circuit = parser.quantum_function(endpoint)
+        print("\n" + "="*50 + "\n")
+    
+    # Interactive mode
+    print("Interactive Mode:")
+    print("Enter an endpoint to analyze (or 'quit' to exit):")
+    
+    while True:
+        user_input = input("\nEndpoint: ").strip()
+        if user_input.lower() in ['quit', 'exit', 'q']:
+            break
+        if user_input:
+            try:
+                parser.quantum_function(user_input)
+            except Exception as e:
+                print(f"Error processing '{user_input}': {e}")
+
+if __name__ == "__main__":
+    main()
