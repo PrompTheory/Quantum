@@ -1,0 +1,6 @@
+state 1 = 0
+state 2 = 1
+state 3 = 2
+
+if state 1 OR state 2 ==inqdequate
+parse state 3
